@@ -1,0 +1,150 @@
+<?php
+
+/*
+ *  Copyright (c) 2012. All Rights Reserved. 
+ *  All the code written is developed by 
+ *  Hamza Waqas (Team Lead Software Engineer)
+ *  with or without his team.
+ *  
+ *  All the code written is custom and doesn't copied
+ */
+
+function reportanabuse_help($path, $args) {
+    if( $path == 'admin/help#reportanabuse')
+        return '<h3>Module helps to report the abused / offense content can be present all over the site</h3>';
+}
+
+function reportanabuse_menu(){
+    $items = array();
+    $items['admin/reportanabuse'] = array(
+        'title' => t('Report an abuse'),
+        'page callback' => '_reportanabuse_admin_page',
+        'access arguments' => array('administer reportanabuse'),
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function reportanabuse_permission() {
+    return array(
+        'administer reportanabuse' => array(
+            'title'     => t('Administer Report an abuse'),
+        )
+    );
+}
+
+function reportanabuse_theme($existing, $type, $theme, $path) {
+    return array(
+        'admin_reportanabuse'    => array(
+            'variables'     => array('reports' => null),
+            'template' => 'admin_reportanabuse'
+        )
+    );
+}
+
+function _reportanabuse_sign_form($form, &$form_state) {
+    $form['link'] = array(
+        '#type'     => 'textfield',
+        '#required' => true,
+        '#attributes' => array(
+            'placeholder' => 'Enter Content Link..',
+        ),
+        '#maxlength' => 150,
+    );
+    
+    $form['subject'] = array(
+        '#type'     => 'textfield',
+        //'#title'    => t('Subject:'),
+        '#attributes' => array(
+            'placeholder'=>'Report Subject',
+        ),
+        '#required' => true,
+        '#maxlength' => 50, 
+    );
+    
+    $form['message'] = array(
+        '#type'     => 'textarea',
+        //'#title'    => t('Report Message'),
+        '#attributes' => array(
+            'placeholder'=>'Description of reporting..',
+        ),
+        '#required' => true,
+    );
+    
+    $form['host_ip'] = array(
+        '#type' => 'hidden',
+        '#value'    => $_SERVER['REMOTE_ADDR']
+    );
+    
+    $form['submit']  = array(
+        '#type'     => 'submit',
+        '#prefix'   => '<div id="edit-actions" class="form-actions form-wrapper">',
+        '#suffix'   => '</div>',
+        '#value'    => t("Report"),
+        '#submit'   => array('_reportanabuse_sign_form_submit')
+    );
+    
+    return $form;
+}
+
+function _reportanabuse_sign_form_submit($form, &$form_state) {
+    $values = $form_state['values'];
+    if (array_key_exists('subject', $values)
+                && array_key_exists('message', $values)
+                && array_key_exists('host_ip', $values)
+                && array_key_exists('link', $values)) {
+        
+        reportanabuse_save($values);
+    }
+}
+
+function _reportanabuse_admin_page() {
+    $reports = array();
+    $data = array();
+    //$signs = array();
+    $select = db_select('report_an_abuse', 'raa');
+    $select->fields('raa');
+    $select = $select->extend('TableSort')->extend('PagerDefault')->orderBy('cre_stamp')->limit(20);
+    $data = $select->execute()->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($data as $content) {
+        $reports[] = array(
+            'subject'   => $content['subject'],
+            'message'   => $content['msg_content'],
+            'link'      => l('View', $content['content_link']),
+            'ip'        => $content['host_ip'],
+            'cre_stamp' => date('F j, Y H:ma', $content['cre_stamp'])
+        );
+    }
+    //echo "<pre>"; print_r($reports); exit;
+    return theme('admin_reportanabuse', array('reports' => $reports));
+    //echo 'hello world!';
+}
+
+function reportanabuse_save($data) {
+    try {
+        if ( !is_array($data))
+            throw new Exception("No Report Content is Provided!");
+        
+        if (array_key_exists('subject', $data)
+                && array_key_exists('message', $data)
+                && array_key_exists('host_ip', $data)
+                && array_key_exists('link', $data)) {
+            
+            $insert = db_insert('report_an_abuse')->fields(array(
+                'subject'         => clean($data['subject']),
+                'msg_content'     => clean($data['message']),
+                'content_link'    => $data['link'],
+                'host_ip'         => $data['host_ip'],
+                'cre_stamp'       => time()
+            ))->execute();
+            
+            if ($insert) {
+                drupal_set_message("Your content has been reported successfully!.");
+                drupal_goto();
+            }
+        }
+     } catch (Exception $ex) {
+        echo '<pre>'; print_r($ex); exit;
+    }
+}
+?>
