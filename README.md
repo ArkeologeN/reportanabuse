@@ -11,5 +11,4 @@ git clone https://github.com/ArkeologeN/reportanabuse.git
 Go to your administer -> Modules & enable ReportanAbuse module.
 
 ## Database
-Execute the given .SQL file to your database. It will create a new table. (Pardon me, didn't got enough time to write install script.)
-
+Execute the given .SQL file to your database. It will create a new table. (Pardon me, didn't got enough time to write install script.).
